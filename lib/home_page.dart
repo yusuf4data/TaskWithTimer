@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_alarm_clock/flutter_alarm_clock.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:my_orginizer/services/task_controller.dart';
 import 'package:my_orginizer/widget/add_new_task.dart';
 import 'package:my_orginizer/widget/custom_show_case.dart';
 import 'package:my_orginizer/widget/edit_task.dart';
@@ -45,6 +46,7 @@ class _MyHomePageState extends State<MyHomePage> {
   int totalTimersOfAllTasks = 0;
 
   bool startTimer = false;
+  late TaskController taskController;
 
   @override
   void initState() {
@@ -52,6 +54,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
     calActualTime();
     startSession();
+    taskController = TaskController(context: context);
 
     super.initState();
   }
@@ -93,18 +96,6 @@ class _MyHomePageState extends State<MyHomePage> {
       },
     );
   }
-
-  // void calTimerBalance() {
-  //   Timer.periodic(Duration(seconds: 1), (timer) {
-  //     setState(() {
-  //       var timerBalance = timeAtStartedTimer!.difference(DateTime.now());
-  //       timeRemainingOfTheTask = timerBalance.inMinutes;
-  //       if (timeRemainingOfTheTask <= 0) {
-  //         return;
-  //       }
-  //     });
-  //   });
-  // }
 
   bool isSesionStarted() {
     return (_timeAttheBegining.isBefore(DateTime.now()));
@@ -156,7 +147,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 Expanded(
                     child: ReorderableListView.builder(
                   onReorder: (oldIndex, newIndex) =>
-                      updateMyTaskOrder(oldIndex, newIndex),
+                      taskController.updateMyTaskOrder(oldIndex, newIndex),
                   itemCount: allTasks.length,
                   itemBuilder: (context, index) {
                     int accumalatedTime = allTasks[index].period +
@@ -167,12 +158,14 @@ class _MyHomePageState extends State<MyHomePage> {
 
                     return Dismissible(
                       onDismissed: (direction) {
-                        deleteTask(index);
+                        taskController.deleteTask(index);
+                        timeBalance();
                       },
                       key: Key(allTasks[index].id),
                       child: GestureDetector(
                           onDoubleTap: () {
-                            doubleThisTask(allTasks[index], index);
+                            taskController.doubleThisTask(
+                                allTasks[index], index);
                           },
                           onTap: () {
                             // EditTask(task: state.tasks[index]);
@@ -281,13 +274,16 @@ class _MyHomePageState extends State<MyHomePage> {
       return;
     }
     final firstTime = TimeOfDay.now();
-    TimeOfDay? time =
-        await showTimePicker(context: context, initialTime: firstTime);
-    if (time == null) {
-      return;
+    if (context.mounted) {
+      TimeOfDay? time =
+          await showTimePicker(context: context, initialTime: firstTime);
+      if (time == null) {
+        return;
+      }
+      _timeAttheBegining =
+          DateTime(date.year, date.month, date.day, time.hour, time.minute);
     }
-    _timeAttheBegining =
-        DateTime(date.year, date.month, date.day, time.hour, time.minute);
+
     if (_timeAttheBegining.isBefore(DateTime.now())) {
       _showWrongDateOrTime();
       setState(() {
@@ -384,13 +380,12 @@ class _MyHomePageState extends State<MyHomePage> {
     Size size,
   ) {
     var restTime = (task.period / 5).round();
-
-    // timeRemaining = timeRemaining - taskTotalTime;
-
     return Card(
       // color: const Color.fromARGB(255, 212, 219, 225),
-      child: SizedBox(
-        height: size.width < 700 ? size.height * .2 : size.height * .3,
+      child: Container(
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(100)),
+        width: double.infinity,
+        height: size.width > size.height ? size.height * .2 : size.height * .13,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -423,7 +418,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       runTimer(task);
                     },
                     child: const Icon(Icons.play_arrow)),
-                // const Text('task', style: TextStyle(color: Colors.blue))
+                const Text('task', style: TextStyle(color: Colors.blue))
               ],
             ),
             Text('$restTime'),
@@ -443,18 +438,26 @@ class _MyHomePageState extends State<MyHomePage> {
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                IconButton(
-                  onPressed: () => updateMyTaskOrder(currentIndex, 0),
-                  icon: Icon(
-                    Icons.arrow_drop_up_outlined,
-                    size: size.height * .04,
+                Flexible(
+                  fit: FlexFit.loose,
+                  child: IconButton(
+                    onPressed: () =>
+                        taskController.updateMyTaskOrder(currentIndex, 0),
+                    icon: Icon(
+                      Icons.arrow_drop_up_outlined,
+                      size: size.height * .04,
+                    ),
                   ),
                 ),
-                IconButton(
-                  onPressed: () => updateMyTaskOrder(currentIndex, maxIndex),
-                  icon: Icon(
-                    Icons.arrow_drop_down_sharp,
-                    size: size.height * .04,
+                Flexible(
+                  fit: FlexFit.loose,
+                  child: IconButton(
+                    onPressed: () => taskController.updateMyTaskOrder(
+                        currentIndex, maxIndex),
+                    icon: Icon(
+                      Icons.arrow_drop_down_sharp,
+                      size: size.height * .04,
+                    ),
                   ),
                 ),
               ],
@@ -521,37 +524,6 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
           ),
         );
-      },
-    );
-  }
-
-  void deleteTask(int index) {
-    setState(() {
-      BlocProvider.of<TaskCubit>(context).delete(index);
-      timeBalance();
-    });
-  }
-
-  updateMyTaskOrder(int oldIndex, int newIndex) {
-    setState(() {
-      if (oldIndex < newIndex) {
-        newIndex--;
-      }
-      BlocProvider.of<TaskCubit>(context)
-          .reorderTask(oldIndex: oldIndex, newIndex: newIndex);
-    });
-  }
-
-  void doubleThisTask(Task task, int index) {
-    BlocProvider.of<TaskCubit>(context)
-        .doubleThisTask(task.copyWith(id: const Uuid().v4()), index + 1);
-  }
-
-  void editTask(BuildContext context, Task task) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return EditTask(task: task);
       },
     );
   }
