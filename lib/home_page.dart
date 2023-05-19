@@ -6,10 +6,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:my_orginizer/services/task_controller.dart';
 import 'package:my_orginizer/widget/add_new_task.dart';
 import 'package:my_orginizer/widget/custom_show_case.dart';
-import 'package:my_orginizer/widget/edit_task.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
-import 'package:uuid/uuid.dart';
 
 import 'package:my_orginizer/logic/cubit/task_cubit.dart';
 import 'package:my_orginizer/models/session.dart';
@@ -309,27 +307,29 @@ class _MyHomePageState extends State<MyHomePage> {
       return;
     }
 
-    TimeOfDay? time = await showTimePicker(
-        context: context,
-        initialTime:
-            TimeOfDay(hour: _timeAttheEnd.hour, minute: _timeAttheEnd.minute));
-    if (time == null) {
-      return;
-    }
-    _timeAttheEnd =
-        DateTime(date.year, date.month, date.day, time.hour, time.minute);
-    if (_timeAttheEnd.isBefore(DateTime.now())) {
-      _showWrongDateOrTime();
-      setState(() {
-        _timeAttheEnd = DateTime.now().add(const Duration(minutes: 25));
-      });
-      return;
-    }
-
-    setState(() {
+    if (context.mounted) {
+      TimeOfDay? time = await showTimePicker(
+          context: context,
+          initialTime: TimeOfDay(
+              hour: _timeAttheEnd.hour, minute: _timeAttheEnd.minute));
+      if (time == null) {
+        return;
+      }
       _timeAttheEnd =
           DateTime(date.year, date.month, date.day, time.hour, time.minute);
-    });
+      if (_timeAttheEnd.isBefore(DateTime.now())) {
+        _showWrongDateOrTime();
+        setState(() {
+          _timeAttheEnd = DateTime.now().add(const Duration(minutes: 25));
+        });
+        return;
+      }
+
+      setState(() {
+        _timeAttheEnd =
+            DateTime(date.year, date.month, date.day, time.hour, time.minute);
+      });
+    }
   }
 
   Row pickStartTimeAndEndTime() {

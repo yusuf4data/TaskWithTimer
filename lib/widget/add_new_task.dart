@@ -6,9 +6,9 @@ import 'package:uuid/uuid.dart';
 
 class AddNewTask extends StatelessWidget {
   AddNewTask({super.key});
-  TextEditingController timeController = TextEditingController();
+  final TextEditingController timeController = TextEditingController();
 
-  TextEditingController taskController = TextEditingController();
+  final TextEditingController taskController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -49,18 +49,14 @@ class AddNewTask extends StatelessWidget {
                       if (timeController.text == '') {
                         //   if (timeRemaining > 30) {
                         timeController.text = '25';
-             
                       }
 
                       {
-                        var tasktimer = int.parse(timeController.text);
-                        var totalTimer = tasktimer + (tasktimer / 5).round();
                         BlocProvider.of<TaskCubit>(context).addTask(Task(
                             id: const Uuid().v4(),
                             title: taskController.text,
                             period: int.parse(timeController.text)));
 
-                    
                         Navigator.pop(context);
                       }
                     },

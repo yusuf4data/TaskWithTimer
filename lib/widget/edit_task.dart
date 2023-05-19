@@ -5,8 +5,8 @@ import 'package:my_orginizer/logic/cubit/task_cubit.dart';
 import 'package:my_orginizer/models/task.dart';
 
 class EditTask extends StatefulWidget {
-  Task task;
-  EditTask({
+  final Task task;
+  const EditTask({
     Key? key,
     required this.task,
   }) : super(key: key);
@@ -58,9 +58,7 @@ class _EditTaskState extends State<EditTask> {
                       if (timeController.text == '') {
                         timeController.text = widget.task.period.toString();
                       }
-                      var taskTimer = int.parse(timeController.text);
 
-                      //timeRemaining - (taskTimer - task.period);
                       BlocProvider.of<TaskCubit>(context).edit(Task(
                           id: widget.task.id,
                           title: taskController.text,
