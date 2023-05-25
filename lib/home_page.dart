@@ -14,6 +14,8 @@ import 'package:my_orginizer/models/session.dart';
 import 'package:my_orginizer/models/task.dart';
 import 'package:my_orginizer/widget/top_title.dart';
 
+import 'widget/task_card_widget.dart';
+
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
 
@@ -99,6 +101,66 @@ class _MyHomePageState extends State<MyHomePage> {
     return (_timeAttheBegining.isBefore(DateTime.now()));
   }
 
+  Future pickFirstTime(
+      {required BuildContext context,
+      required DateTime timeAtTheBegining}) async {
+    startTimer = false;
+    DateTime? date = await showDatePicker(
+        context: context,
+        initialDate: timeAtTheBegining,
+        firstDate: DateTime(1900),
+        lastDate: DateTime(2100));
+    if (date == null || date.day < DateTime.now().day) {
+      _showWrongDateOrTime(context);
+      return;
+    }
+    final firstTime = TimeOfDay.now();
+    if (context.mounted) {
+      TimeOfDay? time =
+          await showTimePicker(context: context, initialTime: firstTime);
+      if (time == null) {
+        return;
+      }
+      _timeAttheBegining =
+          DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    }
+
+    if (_timeAttheBegining.isBefore(DateTime.now())) {
+      _showWrongDateOrTime(context);
+      setState(() {
+        _timeAttheBegining = DateTime.now();
+      });
+      return;
+    }
+
+    setState(() {
+      _timeAttheBegining;
+    });
+  }
+
+  void _showWrongDateOrTime(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          child: SizedBox(
+            height: 100,
+            child: Column(
+              children: [
+                const Text('Your date and Time should be in the future!'),
+                TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Ok'))
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -113,31 +175,63 @@ class _MyHomePageState extends State<MyHomePage> {
 
             return Column(
               children: [
-                const SizedBox(
-                  height: 20,
+                SizedBox(
+                  height: size.height * .01,
                 ),
-                TopTitle(
-                  actualTimeRemaining: actualTimeRemainingOfTheSession,
-                  isSesionStarted: isSesionStarted(),
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color.fromARGB(255, 239, 232, 232),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      width: 5,
+                      color: const Color.fromARGB(255, 151, 138, 189),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      const SizedBox(
+                        height: 20,
+                      ),
+                      TopTitle(
+                        actualTimeRemaining: actualTimeRemainingOfTheSession,
+                        isSesionStarted: isSesionStarted(),
+                      ),
+                      const SizedBox(
+                        height: 10,
+                      ),
+                      pickStartTimeAndEndTime(),
+                    ],
+                  ),
                 ),
-                const SizedBox(
-                  height: 10,
+                SizedBox(
+                  height: size.height * .01,
                 ),
-                pickStartTimeAndEndTime(),
-                TextButton(
-                    onPressed: () {
-                      if (timeRemaining > actualTimeRemainingOfTheSession) {
-                        setState(() {
-                          timeRemaining = actualTimeRemainingOfTheSession;
-                        });
-                      }
-                      addNewTaskCard();
-                      timeBalance();
-                    },
-                    child: CustomShowCase(
-                        description: 'add new task with timer in minutes',
-                        globalkey: _three,
-                        child: const Text('Add task with timer'))),
+                Container(
+                  height: size.height * .1,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: const Color.fromARGB(255, 239, 232, 232),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      width: 5,
+                      color: const Color.fromARGB(255, 151, 138, 189),
+                    ),
+                  ),
+                  child: TextButton(
+                      onPressed: () {
+                        if (timeRemaining > actualTimeRemainingOfTheSession) {
+                          setState(() {
+                            timeRemaining = actualTimeRemainingOfTheSession;
+                          });
+                        }
+                        addNewTaskCard();
+                        timeBalance();
+                      },
+                      child: CustomShowCase(
+                          description: 'add new task with timer in minutes',
+                          globalkey: _three,
+                          child: const Text('Add task with timer'))),
+                ),
                 if (isSesionStarted())
                   Text(
                       'If you start now  --> ${DateTime.now().hour.toString().padLeft(2, '0')} :'
@@ -170,22 +264,30 @@ class _MyHomePageState extends State<MyHomePage> {
                             editTask(context, allTasks[index]);
                             timeBalance();
                           },
-                          child: Column(
-                            children: [
-                              myTaskCard(allTasks[index], index,
-                                  allTasks.length, size),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceAround,
-                                children: [
-                                  if (_timeAttheBegining
-                                      .isBefore(DateTime.now()))
-                                    Text(
-                                        '${timeAtEachTask.hour.toString().padLeft(2, '0')}:'
-                                        '${timeAtEachTask.minute.toString().padLeft(2, '0')}'),
-                                ],
-                              ),
-                            ],
+                          child: Padding(
+                            padding: const EdgeInsets.all(5.0),
+                            child: Column(
+                              children: [
+                                TaskCardWidget(
+                                    four: _four,
+                                    task: allTasks[index],
+                                    currentIndex: index,
+                                    maxIndex: allTasks.length,
+                                    size: size,
+                                    taskController: taskController),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceAround,
+                                  children: [
+                                    if (_timeAttheBegining
+                                        .isBefore(DateTime.now()))
+                                      Text(
+                                          '${timeAtEachTask.hour.toString().padLeft(2, '0')}:'
+                                          '${timeAtEachTask.minute.toString().padLeft(2, '0')}'),
+                                  ],
+                                ),
+                              ],
+                            ),
                           )),
                     );
                   },
@@ -260,41 +362,6 @@ class _MyHomePageState extends State<MyHomePage> {
     return '${diff.inMinutes}';
   }
 
-  Future pickFirstTime() async {
-    startTimer = false;
-    DateTime? date = await showDatePicker(
-        context: context,
-        initialDate: _timeAttheBegining,
-        firstDate: DateTime(1900),
-        lastDate: DateTime(2100));
-    if (date == null || date.day < DateTime.now().day) {
-      _showWrongDateOrTime();
-      return;
-    }
-    final firstTime = TimeOfDay.now();
-    if (context.mounted) {
-      TimeOfDay? time =
-          await showTimePicker(context: context, initialTime: firstTime);
-      if (time == null) {
-        return;
-      }
-      _timeAttheBegining =
-          DateTime(date.year, date.month, date.day, time.hour, time.minute);
-    }
-
-    if (_timeAttheBegining.isBefore(DateTime.now())) {
-      _showWrongDateOrTime();
-      setState(() {
-        _timeAttheBegining = DateTime.now();
-      });
-      return;
-    }
-
-    setState(() {
-      _timeAttheBegining;
-    });
-  }
-
   Future pickEndTime() async {
     startTimer = false;
     DateTime? date = await showDatePicker(
@@ -303,7 +370,7 @@ class _MyHomePageState extends State<MyHomePage> {
         firstDate: DateTime(1900),
         lastDate: DateTime(2100));
     if (date == null || date.day < DateTime.now().day) {
-      _showWrongDateOrTime();
+      _showWrongDateOrTime(context);
       return;
     }
 
@@ -318,7 +385,7 @@ class _MyHomePageState extends State<MyHomePage> {
       _timeAttheEnd =
           DateTime(date.year, date.month, date.day, time.hour, time.minute);
       if (_timeAttheEnd.isBefore(DateTime.now())) {
-        _showWrongDateOrTime();
+        _showWrongDateOrTime(context);
         setState(() {
           _timeAttheEnd = DateTime.now().add(const Duration(minutes: 25));
         });
@@ -344,7 +411,8 @@ class _MyHomePageState extends State<MyHomePage> {
           globalkey: _one,
           child: GestureDetector(
               onTap: () {
-                pickFirstTime();
+                pickFirstTime(
+                    context: context, timeAtTheBegining: _timeAttheBegining);
               },
               child: Text(
                 style: const TextStyle(
@@ -373,105 +441,8 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  Card myTaskCard(
-    Task task,
-    int currentIndex,
-    int maxIndex,
-    Size size,
-  ) {
-    var restTime = (task.period / 5).round();
-    return Card(
-      // color: const Color.fromARGB(255, 212, 219, 225),
-      child: Container(
-        decoration: BoxDecoration(borderRadius: BorderRadius.circular(100)),
-        width: double.infinity,
-        height: size.width > size.height ? size.height * .2 : size.height * .13,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: size.width * 0.2,
-              child: currentIndex == 0
-                  ? CustomShowCase(
-                      description: 'one tap to edit , double tap to duplicate',
-                      globalkey: _four,
-                      child: Text(
-                        '${currentIndex + 1} - ${task.title}',
-                        textAlign: TextAlign.start,
-                        maxLines: 4, // justify,
-                      ),
-                    )
-                  : Text(
-                      '${currentIndex + 1} - ${task.title}',
-                      textAlign: TextAlign.start,
-                      maxLines: 4, // justify,
-                    ),
-            ),
-            Text('${task.period}'),
-            const Text('m'),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                TextButton(
-                    onPressed: () {
-                      runTimer(task);
-                    },
-                    child: const Icon(Icons.play_arrow)),
-                const Text('task', style: TextStyle(color: Colors.blue))
-              ],
-            ),
-            Text('$restTime'),
-            const Text('m'),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                TextButton(
-                    onPressed: () {
-                      runRestTimer(task);
-                    },
-                    child: const Icon(Icons.play_arrow)),
-                const Text('rest', style: TextStyle(color: Colors.blue))
-              ],
-            ),
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                Flexible(
-                  fit: FlexFit.loose,
-                  child: IconButton(
-                    onPressed: () =>
-                        taskController.updateMyTaskOrder(currentIndex, 0),
-                    icon: Icon(
-                      Icons.arrow_drop_up_outlined,
-                      size: size.height * .04,
-                    ),
-                  ),
-                ),
-                Flexible(
-                  fit: FlexFit.loose,
-                  child: IconButton(
-                    onPressed: () => taskController.updateMyTaskOrder(
-                        currentIndex, maxIndex),
-                    icon: Icon(
-                      Icons.arrow_drop_down_sharp,
-                      size: size.height * .04,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   void runTimer(Task task) async {
     FlutterAlarmClock.createTimer(task.period * 60, title: task.title);
-    timeAtStartedTimer = DateTime.now();
-    // calTimerBalance();
 
     (task.period / 5).round();
   }
@@ -501,29 +472,6 @@ class _MyHomePageState extends State<MyHomePage> {
       context: context,
       builder: (context) {
         return AddNewTask();
-      },
-    );
-  }
-
-  void _showWrongDateOrTime() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return Dialog(
-          child: SizedBox(
-            height: 100,
-            child: Column(
-              children: [
-                const Text('Your date and Time should be in the future!'),
-                TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    child: const Text('Ok'))
-              ],
-            ),
-          ),
-        );
       },
     );
   }
